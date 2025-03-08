@@ -1,70 +1,93 @@
-import * as vscode from 'vscode';
-import ollama from 'ollama';
+import * as vscode from "vscode";
+import ollama from "ollama";
 
 export function activate(context: vscode.ExtensionContext) {
-    const disposable = vscode.commands.registerCommand('ai-assistant-ext.start', () => {
-        const panel = vscode.window.createWebviewPanel(
-            'deepChat',
-            'Deep Seek Chat',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true // Prevents the webview from resetting
+  const disposable = vscode.commands.registerCommand(
+    "ai-assistant-ext.start",
+    () => {
+      const panel = vscode.window.createWebviewPanel(
+        "deepChat",
+        "Deep Seek Chat",
+        vscode.ViewColumn.One,
+        {
+          enableScripts: true,
+          retainContextWhenHidden: true, // Prevents webview from resetting
+        }
+      );
+
+      panel.webview.html = getWebviewContent();
+
+      panel.webview.onDidReceiveMessage(async (message) => {
+        if (message.command === "chat") {
+          const userPrompt = message.text;
+          let responseText = "";
+
+          try {
+            console.log("Sending request to Ollama:", userPrompt);
+
+            const streamResponse = await ollama.chat({
+              model: "deepseek-r1:8b",
+              messages: [{ role: "user", content: userPrompt }],
+              stream: true,
+            });
+
+            if (streamResponse && Symbol.asyncIterator in streamResponse) {
+              for await (const part of streamResponse) {
+                responseText += part.message.content;
+                console.log("Received chunk:", part.message.content);
+                panel.webview.postMessage({
+                  command: "chatResponse",
+                  text: responseText,
+                });
+              }
+            } else {
+              panel.webview.postMessage({
+                command: "chatResponse",
+                text: "Error: Invalid response stream",
+              });
             }
-        );
+          } catch (error) {
+            console.error("Ollama Chat Error:", error);
+            panel.webview.postMessage({
+              command: "chatResponse",
+              text: "Error: " + (error as Error).message,
+            });
+          }
+        }
+      });
 
-        panel.webview.html = getWebviewContent();
+      panel.onDidDispose(
+        () => {
+          console.log("Webview panel closed.");
+        },
+        null,
+        context.subscriptions
+      );
 
-        panel.webview.onDidReceiveMessage(async (message) => {
-            if (message.command === 'chat') {
-                const userPrompt = message.text;
-                let responseText = '';
+      context.subscriptions.push(disposable);
+    }
+  );
 
-                try {
-                    console.log("Sending request to Ollama:", userPrompt);
-
-                    const streamResponse = await ollama.chat({
-                        model: 'deepseek-r1:8b',
-                        messages: [{ role: 'user', content: userPrompt }],
-                        stream: true
-                    });
-
-                    if (streamResponse && Symbol.asyncIterator in streamResponse) {
-                        for await (const part of streamResponse) {
-                            responseText += part.message.content;
-                            console.log("Received chunk:", part.message.content); // Debugging log
-                            panel.webview.postMessage({ command: 'chatResponse', text: responseText });
-                        }
-                    } else {
-                        panel.webview.postMessage({ command: 'chatResponse', text: "Error: Invalid response stream" });
-                    }
-                } catch (error) {
-                    const errorMessage = (error as Error).message;
-                    console.error("Ollama Chat Error:", errorMessage);
-                    panel.webview.postMessage({ command: 'chatResponse', text: 'Error: ' + errorMessage });
-                }
-            }
-        });
-
-        // Handle panel disposal
-        panel.onDidDispose(() => {
-            console.log("Webview panel closed.");
-        }, null, context.subscriptions);
-
-        context.subscriptions.push(disposable);
-    });
-
-    context.subscriptions.push(disposable);
+  context.subscriptions.push(disposable);
 }
 
 function getWebviewContent(): string {
-    return /*html*/`
+  return /*html*/ `
         <!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Deep Seek Chat</title>
+            
+            <!-- Load KaTeX for Math Rendering -->
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.7/dist/katex.min.css">
+            <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.7/dist/katex.min.js"></script>
+            <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.7/dist/contrib/auto-render.min.js"></script>
+
+            <!-- Load Marked.js for Markdown Rendering -->
+            <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
             <style>
                 body {
                     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -74,7 +97,7 @@ function getWebviewContent(): string {
                     color: #ffffff;
                     display: flex;
                     flex-direction: column;
-                    height: 100vh; /* Full height of the view */
+                    height: 100vh;
                 }
 
                 h2 {
@@ -84,7 +107,7 @@ function getWebviewContent(): string {
                 }
 
                 #container {
-                    flex: 1; /* Expand container to fill available space */
+                    flex: 1;
                     display: flex;
                     flex-direction: column;
                     gap: 10px;
@@ -104,7 +127,7 @@ function getWebviewContent(): string {
                 }
 
                 #askBtn {
-                    align-self: flex-start; /* Align button to the start of container */
+                    align-self: flex-start;
                     padding: 10px 20px;
                     font-size: 16px;
                     font-weight: bold;
@@ -121,7 +144,7 @@ function getWebviewContent(): string {
                 }
 
                 #response {
-                    flex: 1; /* Allow the response box to grow and fill remaining space */
+                    flex: 1;
                     border-radius: 5px;
                     border: none;
                     padding: 15px;
@@ -131,6 +154,7 @@ function getWebviewContent(): string {
                     line-height: 1.6;
                     overflow-y: auto;
                     margin-top: 10px;
+                    white-space: pre-wrap;
                 }
 
                 textarea:focus, #askBtn:focus {
@@ -145,9 +169,18 @@ function getWebviewContent(): string {
                 <button id="askBtn">Ask</button>
                 <div id="response">Your responses will appear here...</div>
             </div>
-            <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
             <script>
                 const vscode = acquireVsCodeApi();
+
+                function formatMath(input) {
+                    return input
+                        .replace(/\\\[/g, "$$").replace(/\\\]/g, "$$") // Convert block equations
+                        .replace(/\\\(/g, "$").replace(/\\\)/g, "$") // Convert inline equations
+                        .replace(/\b(\d+) \^ (\d+)\b/g, "$1^{ $2 }") // Convert exponents properly
+                        .replace(/x\^(\d+)/g, "x^{\$1}") // Fix exponent formatting
+                        .replace(/\\frac/g, "\\frac"); // Ensure fractions render properly
+                }
 
                 document.getElementById('askBtn').addEventListener('click', () => {
                     const text = document.getElementById('prompt').value;
@@ -157,10 +190,20 @@ function getWebviewContent(): string {
                 window.addEventListener('message', event => {
                     const { command, text } = event.data;
                     if (command === 'chatResponse') {
-                        // Convert Markdown to HTML
-                        const renderedHTML = marked.parse(text);
+                        let formattedText = formatMath(text);
 
-                        // Set the HTML content of the response box
+                        // Convert Markdown to HTML
+                        let renderedHTML = marked.parse(formattedText);
+
+                        setTimeout(() => {
+                            renderMathInElement(document.getElementById('response'), {
+                                delimiters: [
+                                    { left: "$$", right: "$$", display: true },
+                                    { left: "$", right: "$", display: false }
+                                ]
+                            });
+                        }, 100);
+
                         document.getElementById('response').innerHTML = renderedHTML;
                     }
                 });
@@ -169,6 +212,5 @@ function getWebviewContent(): string {
         </html>
     `;
 }
-
 
 export function deactivate() {}

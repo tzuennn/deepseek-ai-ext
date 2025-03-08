@@ -1,71 +1,82 @@
-# ai-assistant-ext README
+# Deep Seek Chat Extension
 
-This is the README for your extension "ai-assistant-ext". After writing up a brief description, we recommend including the following sections.
-
-## Features
-
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
-
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
-
-## Requirements
-
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
-
-## Extension Settings
-
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
-
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+**Deep Seek Chat Extension** is a Visual Studio Code extension that integrates with Ollama's AI models to provide intelligent responses to user prompts. It features a responsive UI, real-time streaming updates, and Markdown rendering for better interaction and readability.
 
 ---
 
-## Following extension guidelines
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
 
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+## ✨ Features
 
-## Working with Markdown
+- **AI Chat Integration**: Send prompts and get AI-generated responses using Ollama's API.
+- **Live Streaming of Responses**: See responses update incrementally as they are generated.
+- **Markdown Support**: AI responses are rendered with proper Markdown formatting.
+- **Responsive and Modern UI**: The extension adapts to different window sizes for better usability.
+- **Simple Interaction**: Use an "Ask" button to send prompts and view responses easily.
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
+---
 
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+## 🚀 Getting Started
 
-## For more information
+### Prerequisites
 
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+Ensure you have the following installed on your machine:
 
-**Enjoy!**
+- [Node.js](https://nodejs.org) (for building the extension)
+- [Ollama](https://ollama.ai/) (for AI responses)
+- [Visual Studio Code](https://code.visualstudio.com/) (to run the extension)
+
+## 🖼 UI Preview
+
+Here is a how it looks like!
+<p>
+  <img src="src/images/deepseek_ext_start.png" alt="Deep Seek Chat UI" width="80%">
+</p>
+
+
+## 🚧 Limitations and Future Work
+
+While **Deep Seek Chat Extension** provides a seamless AI-assisted chat experience, there are areas where improvements can be made. Below are the **current limitations** and potential **enhancements** for future development.
+
+### 🔴 **Current Limitations**
+
+- **Limited AI Model Customization**  
+  Currently, the extension only supports `"deepseek-r1:8b"`, and users cannot switch models dynamically.
+
+- **No Chat History Persistence**  
+  Responses are **not saved** when the webview is closed, and past conversations cannot be retrieved.
+
+- **Math Formatting Issues in Edge Cases**  
+  While KaTeX renders most math expressions correctly, complex formulas such as **nested fractions** or **matrix notations** may not display properly.
+
+- **Lack of Multi-Turn Memory**  
+  The extension **does not retain conversation history**, meaning each query is processed independently without considering previous context.
+
+- **Limited UI Customization**  
+  Users currently **cannot change fonts, themes, or adjust text size**.
+
+---
+
+### 🚀 **Future Enhancements**
+
+- **🔄 Support for Custom AI Models**  
+  - Implement a **settings panel** allowing users to select different AI models or enter API keys.
+  - Expand support for additional models, including OpenAI, Claude, and custom fine-tuned versions.
+
+- **💾 Chat History Persistence**  
+  - Enable **local storage** or **cloud-based logging** to retain chat history.
+  - Implement a **"Load Previous Chats"** feature for recalling past conversations.
+
+- **🧠 Memory for Context-Aware Responses**  
+  - Introduce a **session-based memory** feature, allowing the AI to reference past messages.
+  - Add an **option to clear session memory** when needed.
+
+- **🎨 Customizable UI & Themes**  
+  - Allow users to **toggle light/dark mode**.
+  - Provide options for **custom fonts and font sizes**.
+
+- **📖 Enhanced Math & Code Rendering**  
+  - Improve KaTeX preprocessing for better **nested expressions and complex formulas**.
+  - Add **syntax highlighting** for code snippets.
+
+---
