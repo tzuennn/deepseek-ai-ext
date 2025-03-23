@@ -11,7 +11,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.ViewColumn.One,
         {
           enableScripts: true,
-          retainContextWhenHidden: true, // Prevents webview from resetting
+          retainContextWhenHidden: true,
         }
       );
 
@@ -23,8 +23,6 @@ export function activate(context: vscode.ExtensionContext) {
           let responseText = "";
 
           try {
-            console.log("Sending request to Ollama:", userPrompt);
-
             const streamResponse = await ollama.chat({
               model: "deepseek-r1:8b",
               messages: [{ role: "user", content: userPrompt }],
@@ -34,23 +32,30 @@ export function activate(context: vscode.ExtensionContext) {
             if (streamResponse && Symbol.asyncIterator in streamResponse) {
               for await (const part of streamResponse) {
                 responseText += part.message.content;
-                console.log("Received chunk:", part.message.content);
                 panel.webview.postMessage({
                   command: "chatResponse",
                   text: responseText,
+                  done: false,
                 });
               }
+
+              panel.webview.postMessage({
+                command: "chatResponse",
+                text: responseText,
+                done: true,
+              });
             } else {
               panel.webview.postMessage({
                 command: "chatResponse",
                 text: "Error: Invalid response stream",
+                done: true,
               });
             }
           } catch (error) {
-            console.error("Ollama Chat Error:", error);
             panel.webview.postMessage({
               command: "chatResponse",
               text: "Error: " + (error as Error).message,
+              done: true,
             });
           }
         }
@@ -73,144 +78,157 @@ export function activate(context: vscode.ExtensionContext) {
 
 function getWebviewContent(): string {
   return /*html*/ `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Deep Seek Chat</title>
-            
-            <!-- Load KaTeX for Math Rendering -->
-            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.7/dist/katex.min.css">
-            <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.7/dist/katex.min.js"></script>
-            <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.7/dist/contrib/auto-render.min.js"></script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Deep Seek Chat</title>
 
-            <!-- Load Marked.js for Markdown Rendering -->
-            <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.7/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.7/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.7/dist/contrib/auto-render.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
-            <style>
-                body {
-                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                    margin: 0;
-                    padding: 0;
-                    background-color: #1e1e1e;
-                    color: #ffffff;
-                    display: flex;
-                    flex-direction: column;
-                    height: 100vh;
-                }
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #1e1e1e;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
 
-                h2 {
-                    margin: 10px;
-                    text-align: center;
-                    color: #61dafb;
-                }
+    h2 {
+      margin: 10px;
+      text-align: center;
+      color: #61dafb;
+    }
 
-                #container {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 10px;
-                    padding: 10px;
-                }
+    #container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 10px;
+    }
 
-                #prompt {
-                    width: 100%;
-                    box-sizing: border-box;
-                    padding: 15px;
-                    font-size: 16px;
-                    border: none;
-                    border-radius: 5px;
-                    background-color: #2e2e2e;
-                    color: #ffffff;
-                    resize: none;
-                }
+    #prompt {
+      width: 100%;
+      padding: 15px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      background-color: #2e2e2e;
+      color: #ffffff;
+      resize: none;
+    }
 
-                #askBtn {
-                    align-self: flex-start;
-                    padding: 10px 20px;
-                    font-size: 16px;
-                    font-weight: bold;
-                    color: #ffffff;
-                    background-color: #007acc;
-                    border: none;
-                    border-radius: 5px;
-                    cursor: pointer;
-                    transition: background-color 0.3s;
-                }
+    #askBtn {
+      align-self: flex-start;
+      padding: 10px 20px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #ffffff;
+      background-color: #007acc;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
 
-                #askBtn:hover {
-                    background-color: #005a9e;
-                }
+    #askBtn:hover {
+      background-color: #005a9e;
+    }
 
-                #response {
-                    flex: 1;
-                    border-radius: 5px;
-                    border: none;
-                    padding: 15px;
-                    background-color: #2e2e2e;
-                    color: #d4d4d4;
-                    font-size: 16px;
-                    line-height: 1.6;
-                    overflow-y: auto;
-                    margin-top: 10px;
-                    white-space: pre-wrap;
-                }
+    #response {
+      flex: 1;
+      padding: 15px;
+      background-color: #2e2e2e;
+      color: #d4d4d4;
+      font-size: 16px;
+      line-height: 1.4;
+      overflow-y: auto;
+      margin-top: 10px;
+      white-space: pre-wrap;
+    }
 
-                textarea:focus, #askBtn:focus {
-                    outline: none;
-                }
-            </style>
-        </head>
-        <body>
-            <h2>Deep Seek Chat Extension</h2>
-            <div id="container">
-                <textarea id="prompt" rows="4" placeholder="Type your question here..."></textarea>
-                <button id="askBtn">Ask</button>
-                <div id="response">Your responses will appear here...</div>
-            </div>
+    #response p {
+      margin: 0 0 8px 0;
+    }
 
-            <script>
-                const vscode = acquireVsCodeApi();
+    #response pre {
+      margin: 8px 0;
+      background: #1e1e1e;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
 
-                function formatMath(input) {
-                    return input
-                        .replace(/\\\[/g, "$$").replace(/\\\]/g, "$$") // Convert block equations
-                        .replace(/\\\(/g, "$").replace(/\\\)/g, "$") // Convert inline equations
-                        .replace(/\b(\d+) \^ (\d+)\b/g, "$1^{ $2 }") // Convert exponents properly
-                        .replace(/x\^(\d+)/g, "x^{\$1}") // Fix exponent formatting
-                        .replace(/\\frac/g, "\\frac"); // Ensure fractions render properly
-                }
+    textarea:focus, #askBtn:focus {
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+  <h2>Deep Seek Chat Extension</h2>
+  <div id="container">
+    <textarea id="prompt" rows="4" placeholder="Type your question here..."></textarea>
+    <button id="askBtn">Ask</button>
+    <div id="response">Your responses will appear here...</div>
+  </div>
 
-                document.getElementById('askBtn').addEventListener('click', () => {
-                    const text = document.getElementById('prompt').value;
-                    vscode.postMessage({ command: 'chat', text });
-                });
+  <script>
+    const vscode = acquireVsCodeApi();
+    let bufferText = "";
 
-                window.addEventListener('message', event => {
-                    const { command, text } = event.data;
-                    if (command === 'chatResponse') {
-                        let formattedText = formatMath(text);
+    function formatMath(input) {
+      return input
+        .replace(/\\\[/g, "$$").replace(/\\\]/g, "$$")
+        .replace(/\\\(/g, "$").replace(/\\\)/g, "$")
+        .replace(/\b(\\?\\d+) \^ (\\?\\d+)\b/g, "$1^{ $2 }")
+        .replace(/x\^(\\d+)/g, "x^{\$1}")
+        .replace(/\\frac/g, "\\frac");
+    }
 
-                        // Convert Markdown to HTML
-                        let renderedHTML = marked.parse(formattedText);
+    document.getElementById('askBtn').addEventListener('click', () => {
+      const text = document.getElementById('prompt').value;
+      bufferText = "";
+      document.getElementById('response').innerText = "Loading...";
+      vscode.postMessage({ command: 'chat', text });
+    });
 
-                        setTimeout(() => {
-                            renderMathInElement(document.getElementById('response'), {
-                                delimiters: [
-                                    { left: "$$", right: "$$", display: true },
-                                    { left: "$", right: "$", display: false }
-                                ]
-                            });
-                        }, 100);
+    window.addEventListener('message', event => {
+      const { command, text, done } = event.data;
+      if (command === 'chatResponse') {
+        bufferText = text;
+        document.getElementById('response').innerText = bufferText;
 
-                        document.getElementById('response').innerHTML = renderedHTML;
-                    }
-                });
-            </script>
-        </body>
-        </html>
-    `;
+        if (done) {
+          const cleaned = bufferText
+            .trim()
+            .replace(/\n{2,}/g, "\n\n")
+            .replace(/^\s+/gm, "");
+
+          const formattedText = formatMath(cleaned);
+          const renderedHTML = marked.parse(formattedText);
+          document.getElementById('response').innerHTML = renderedHTML;
+
+          renderMathInElement(document.getElementById('response'), {
+            delimiters: [
+              { left: "$$", right: "$$", display: true },
+              { left: "$", right: "$", display: false }
+            ]
+          });
+        }
+      }
+    });
+  </script>
+</body>
+</html>
+  `;
 }
 
 export function deactivate() {}
